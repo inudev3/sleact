@@ -1,30 +1,32 @@
-import React, { CSSProperties, FC, useCallback } from 'react';
-import { CloseModalButton, CreateMenu } from './styles';
+import React, { CSSProperties, FC, useCallback } from "react";
+import { CreateMenu, CloseModalButton } from "@components/Menu/styles";
 
-interface Props {
-  show: boolean;
-  onCloseModal: (e: any) => void;
+interface Props{
+  show:boolean;
+  onCloseModal:(e:any)=>void;
   style: CSSProperties;
-  closeButton?: boolean;
+  closeButton?:boolean;
 }
-const Menu: FC<Props> = ({ children, style, show, onCloseModal, closeButton }) => {
-  const stopPropagation = useCallback((e) => {
+
+
+const Menu:FC<Props> = ({children, closeButton, style, show, onCloseModal})=>{
+  const stopPropagation = useCallback((e)=>{
     e.stopPropagation();
   }, []);
-
-  if (!show) return null;
-
-  return (
+if(!show){
+  return null;
+}
+  return(
     <CreateMenu onClick={onCloseModal}>
-      <div style={style} onClick={stopPropagation}>
-        {closeButton && <CloseModalButton onClick={onCloseModal}>&times;</CloseModalButton>}
-        {children}
+      <div onClick={stopPropagation} style={style}>
+      {closeButton && <CloseModalButton onClick={onCloseModal}>&times;</CloseModalButton>}
+      {children}
       </div>
     </CreateMenu>
-  );
-};
-Menu.defaultProps = {
-  closeButton: true,
-};
+  )
+}
+Menu.defaultProps={
+  closeButton:true,
+}
 
 export default Menu;

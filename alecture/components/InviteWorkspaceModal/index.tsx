@@ -1,62 +1,50 @@
-import Modal from '@components/Modal';
-import useInput from '@hooks/useInput';
-import { Button, Input, Label } from '@pages/SignUp/styles';
-import { IChannel, IUser } from '@typings/db';
-import fetcher from '@utils/fetcher';
-import axios from 'axios';
-import React, { FC, useCallback } from 'react';
-import { useParams } from 'react-router';
-import { toast } from 'react-toastify';
-import useSWR from 'swr';
+import React, { VFC } from "react";
+import Modal from "@components/Modal";
+import { Button, Input, Label } from "@pages/signup/styles";
+import { useForm, SubmitHandler } from "react-hook-form";
+import axios from "axios";
+import { useParams } from "react-router";
+import { IUser } from "@typings/db";
+import fetcher from "@utils/fetcher";
+import useSWR from "swr";
+import { toast } from "react-toastify";
 
-interface Props {
+type Props = {
   show: boolean;
   onCloseModal: () => void;
   setShowInviteWorkspaceModal: (flag: boolean) => void;
 }
-const InviteWorkspaceModal: FC<Props> = ({ show, onCloseModal, setShowInviteWorkspaceModal }) => {
-  const { workspace } = useParams<{ workspace: string; channel: string }>();
-  const [newMember, onChangeNewMember, setNewMember] = useInput('');
-  const { data: userData } = useSWR<IUser>('/api/users', fetcher);
-  const { revalidate: revalidateMember } = useSWR<IChannel[]>(
-    userData ? `/api/workspaces/${workspace}/members` : null,
-    fetcher,
-  );
+type FormValue = {
+  email: string;
+}
+const InviteWorkspaceModal: VFC<Props> = ({ show, onCloseModal }) => {
+  const { workspace, channel } = useParams<{ workspace: string, channel: string }>();
+  const {
+    data: userData,
+    error,
+    mutate: mutateMember
+  } = useSWR<IUser[]>(`/api/workspaces/${workspace}/members`, fetcher);
+  const { register, handleSubmit } = useForm({ defaultValues: { email: "" } });
 
-  const onInviteMember = useCallback(
-    (e) => {
-      e.preventDefault();
-      if (!newMember || !newMember.trim()) {
-        return;
-      }
-      axios
-        .post(`/api/workspaces/${workspace}/members`, {
-          email: newMember,
-        })
-        .then((response) => {
-          revalidateMember();
-          setShowInviteWorkspaceModal(false);
-          setNewMember('');
-        })
-        .catch((error) => {
-          console.dir(error);
-          toast.error(error.response?.data, { position: 'bottom-center' });
-        });
-    },
-    [workspace, newMember],
-  );
+  const onInviteMember: SubmitHandler<FormValue> = (data) => {
+    const { email } = data;
+    axios.post(`/api/workspaces/${workspace}/members`, { email }, { withCredentials: true })
+      .then(() => mutateMember(userData, true))
+      .catch((error) => {
+        console.dir(error);
+        toast.error(error.response?.data, { position: "bottom-center" });
+      });
+  };
 
-  return (
-    <Modal show={show} onCloseModal={onCloseModal}>
-      <form onSubmit={onInviteMember}>
-        <Label id="member-label">
-          <span>이메일</span>
-          <Input id="member" type="email" value={newMember} onChange={onChangeNewMember} />
-        </Label>
-        <Button type="submit">초대하기</Button>
-      </form>
-    </Modal>
-  );
+  return (<Modal show={show} onCloseModal={onCloseModal}>
+    <form onSubmit={handleSubmit(onInviteMember)}>
+      <Label id="workspace-label">
+        <span>워크스페이스 이름</span>
+        <Input {...register("email", { required: "입력값은 필수입니다." })} />
+      </Label>
+      <Button type="submit">초대하기</Button>
+    </form>
+  </Modal>);
 };
 
 export default InviteWorkspaceModal;
