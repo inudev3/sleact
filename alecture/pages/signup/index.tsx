@@ -17,10 +17,6 @@ type SignupForm = {
 const SignUp: FC = () => {
   const {register, reset, handleSubmit, watch, formState} = useForm<SignupForm>({defaultValues:{email:"", password:"", nickname:"", passwordcheck:""}})
   const { data, error, mutate, isValidating } = useSWR("/api/users", fetcher); //
-  const [email, onChangeEmail, setEmail] = useInput("");
-  const [nickname, onChangeNickname, setNickname] = useInput("");
-  const [password, _1, setPassword] = useInput(""); //비밀번호
-  const [passwordCheck, _2, setPasswordCheck] = useInput(""); //비밀번호 확인, 둘이 같아야됌
   const [mismatchError, setMismatchError] = useState(false);
   const [signUpError, setSingUpError] = useState("");
   const [signUpSuccess, setSingUpSuccess] = useState(false);
@@ -33,12 +29,10 @@ const SignUp: FC = () => {
     }
   })
 
-  const onChangePassword = useCallback((e) => {
+  const onChangeValidate = useCallback((e) => {
     setMismatchError(subscription.passwordcheck !== subscription.password);
   }, [watch]);
-  const onChangePasswordCheck = useCallback((e) => {
-    setMismatchError(subscription.passwordcheck !== subscription.password);
-  }, [watch]);
+
   const onSubmit:SubmitHandler<SignupForm> =
     (data) => {
     const {email, nickname, password} = data;
@@ -56,6 +50,7 @@ const SignUp: FC = () => {
   if (data) {
     return <Redirect to="/workspace/sleact/channel/일반" />;
   }
+  const {errors} = formState;
   return (
     <div id="container">
       <Header>Sleact</Header>
@@ -66,18 +61,22 @@ const SignUp: FC = () => {
             <Input {...register('email', {required:"필수입력입니다", pattern:{
                 value:/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i,
                 message:"이메일 형식이 아닙니다."}})} />
+
+            {errors && errors.email?.message}
           </div>
         </Label>
         <Label id="nickname-label">
           <span>닉네임</span>
           <div>
-            <Input {...register("nickname", {required:"필수 입력입니다"})} />
+            <Input {...register("nickname", {required:"필수 입력입니다"})} onChange={onChangeValidate} />
+            {errors && errors.nickname?.message}
           </div>
         </Label>
         <Label id="password-label">
           <span>비밀번호</span>
           <div>
-            <Input {...register('password',{required:'필수 입력입니다'})}/>
+            <Input {...register('password',{required:'필수 입력입니다'})} onChange={onChangeValidate}/>
+            {errors && errors.password?.message}
           </div>
         </Label>
         <Label id="password-check-label">
@@ -88,9 +87,8 @@ const SignUp: FC = () => {
             />
           </div>
           {mismatchError && <Error>비밀번호가 일치하지 않습니다.</Error>}
-          {!nickname && <Error>닉네임을 입력해주세요.</Error>}
-          {signUpError && <Error>{signUpError}</Error>}
-          {signUpSuccess && <Success>회원가입되었습니다! 로그인해주세요.</Success>}
+
+          {formState.isSubmitSuccessful && <Success>회원가입되었습니다! 로그인해주세요.</Success>}
         </Label>
         <Button type="submit">회원가입</Button>
       </Form>
