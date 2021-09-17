@@ -1,4 +1,4 @@
-import React, { FC, useCallback, useState } from "react";
+import React, { FC, useCallback, useEffect, useState } from "react";
 import { Button, Error, Form, Header, Input, Label, LinkContainer, Success } from "./styles";
 import axios from "axios";
 import { Link } from "react-router-dom";
@@ -6,9 +6,16 @@ import useInput from "@hooks/useInput";
 import useSWR from "swr";
 import fetcher from "@utils/fetcher";
 import { Redirect } from "react-router";
-
+import {useForm, SubmitHandler} from "react-hook-form";
+import { Formvalues } from "@pages/DirectMessage";
+type SignupForm = {
+  email:string;
+  nickname:string;
+  password:string;
+  passwordcheck:string;
+}
 const SignUp: FC = () => {
-
+  const {register, reset, handleSubmit, watch, formState} = useForm<SignupForm>({defaultValues:{email:"", password:"", nickname:"", passwordcheck:""}})
   const { data, error, mutate, isValidating } = useSWR("/api/users", fetcher); //
   const [email, onChangeEmail, setEmail] = useInput("");
   const [nickname, onChangeNickname, setNickname] = useInput("");
@@ -18,72 +25,66 @@ const SignUp: FC = () => {
   const [signUpError, setSingUpError] = useState("");
   const [signUpSuccess, setSingUpSuccess] = useState(false);
 
+  const subscription = watch();
+
+  useEffect(()=>{
+    if(formState.isSubmitSuccessful){
+      reset();
+    }
+  })
+
   const onChangePassword = useCallback((e) => {
-    setPassword(e.target.value);
-    setMismatchError(e.target.value !== passwordCheck);
-  }, [password, passwordCheck]);
+    setMismatchError(subscription.passwordcheck !== subscription.password);
+  }, [watch]);
   const onChangePasswordCheck = useCallback((e) => {
-    setPasswordCheck(e.target.value);
-    setMismatchError(e.target.value !== password);
-  }, [passwordCheck]);
-  const onSubmit = useCallback(
-    (e) => {
-      e.preventDefault();
+    setMismatchError(subscription.passwordcheck !== subscription.password);
+  }, [watch]);
+  const onSubmit:SubmitHandler<SignupForm> =
+    (data) => {
+    const {email, nickname, password} = data;
       if (!mismatchError) {
-        setSingUpError("");
-        setSingUpSuccess(false);
-        console.log("서버로 회원가입하기");
         axios.post("/api/users", { email, nickname, password }, {
           withCredentials: true
         })
-          .then((response) => {
-            console.log(response);
-            setSingUpSuccess(true);
-          })
           .catch((error) => {
-            console.log(error.response);
-            setSingUpError(error.response.data);
+            console.log(error.response)
           })
         ;
       }
-      console.log(email, nickname, password, passwordCheck, mismatchError);
-    },
-    [email, nickname, password, passwordCheck]
-  );
+
+    };
   if (data) {
     return <Redirect to="/workspace/sleact/channel/일반" />;
   }
   return (
     <div id="container">
       <Header>Sleact</Header>
-      <Form onSubmit={onSubmit}>
+      <Form onSubmit={handleSubmit(onSubmit)}>
         <Label id="email-label">
           <span>이메일 주소</span>
           <div>
-            <Input type="email" id="email" name="email" value={email} onChange={onChangeEmail} />
+            <Input {...register('email', {required:"필수입력입니다", pattern:{
+                value:/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i,
+                message:"이메일 형식이 아닙니다."}})} />
           </div>
         </Label>
         <Label id="nickname-label">
           <span>닉네임</span>
           <div>
-            <Input type="text" id="nickname" name="nickname" value={nickname} onChange={onChangeNickname} />
+            <Input {...register("nickname", {required:"필수 입력입니다"})} />
           </div>
         </Label>
         <Label id="password-label">
           <span>비밀번호</span>
           <div>
-            <Input type="password" id="password" name="password" value={password} onChange={onChangePassword} />
+            <Input {...register('password',{required:'필수 입력입니다'})}/>
           </div>
         </Label>
         <Label id="password-check-label">
           <span>비밀번호 확인</span>
           <div>
             <Input
-              type="password"
-              id="password-check"
-              name="password-check"
-              value={passwordCheck}
-              onChange={onChangePasswordCheck}
+              {...register('passwordcheck')}
             />
           </div>
           {mismatchError && <Error>비밀번호가 일치하지 않습니다.</Error>}
